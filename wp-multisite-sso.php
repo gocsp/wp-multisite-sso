@@ -50,8 +50,24 @@ class WP_MultiSite_SSO {
 	 * @param type $network_sites
 	 * @return type
 	 */
-	public static function get_network_sites( $network_sites = array() ) {
+	public static function get_network_sites( $network_sites = array(), $user_id = null ) {
 		$network_sites = array();
+
+		/**
+		 * Filters the list of network sites for SSO before it is populated.
+		 *
+		 * Passing a non-null value to the filter will effectively short circuit
+		 * this method, returning that value instead.
+		 *
+		 * @since 1.x
+		 *
+		 * @param null $retval Return array with the blog ID as array key and domain URL as array value.
+		 */
+		$pre_get_sites = apply_filters( 'wp_multisite_sso_pre_get_network_sites', null, $user_id );
+		// Allow developers to bail out of default network site lookup.
+		if ( null !== $pre_get_sites ) {
+			return $pre_get_sites;
+		}
 
 		// get list of sites
 		$sites = function_exists('get_sites') ? get_sites() : wp_get_sites();
@@ -109,7 +125,7 @@ class WP_MultiSite_SSO {
 		$time        = time();
 		$user_hash   = md5( sprintf( self::$user_hash_md5_format, $user->ID ) );
 
-		$network_sites = array_diff( WP_MultiSite_SSO::get_network_sites(), array( esc_url( home_url() ) ) );
+		$network_sites = array_diff( WP_MultiSite_SSO::get_network_sites( null, $user->ID ), array( esc_url( home_url() ) ) );
 
 		// Bail if we have no network sites to login to.
 		if ( empty( $network_sites ) ) {
@@ -286,7 +302,9 @@ class WP_MultiSite_SSO {
 	 * signed out of the current blog.
 	 */
 	public static function handle_logout() {
-		$network_sites = array_diff( WP_MultiSite_SSO::get_network_sites(), array( esc_url( home_url() ) ) );
+		$user = wp_get_current_user();
+
+		$network_sites = array_diff( WP_MultiSite_SSO::get_network_sites( array(), $user->ID ), array( esc_url( home_url() ) ) );
 
 		// Bail if we have no network sites to logout of.
 		if ( empty( $network_sites ) ) {

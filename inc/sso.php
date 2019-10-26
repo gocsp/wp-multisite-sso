@@ -3,11 +3,19 @@
 if ( is_null( $sso_objects ) || is_null( $action ) )
 	die;
 
+if ( is_null( $user ) ) {
+	$user = wp_get_current_user();
+}
+
 $site_args = array(
 	'action' => $action
 );
 
-$network_sites = array_diff( WP_MultiSite_SSO::get_network_sites(), array( esc_url( home_url() ) ) );
+$network_sites = array_diff( WP_MultiSite_SSO::get_network_sites( array(), $user->ID ), array( esc_url( home_url() ) ) );
+
+if ( $action == self::LOGOUT_ACTION ) {
+	$user = null;
+}
 
 // add the site args to each site
 $sso_sites = array();
